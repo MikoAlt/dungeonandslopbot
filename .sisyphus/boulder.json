@@ -46,6 +46,15 @@
       "agent": "Sisyphus-Junior",
       "category": "deep",
       "updated_at": "2026-04-12T11:55:07.489Z"
+    },
+    "todo:18": {
+      "task_key": "todo:18",
+      "task_label": "18",
+      "task_title": "Multiplayer Mode Handlers",
+      "session_id": "ses_27e6c364effeLzgLDd1SzcE8rE",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-12T12:25:37.509Z"
     }
   }
 }

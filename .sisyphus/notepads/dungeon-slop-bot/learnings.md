@@ -206,3 +206,13 @@
 - `createStoryPromptTemplate(rpgSystem)` selects DND5E or CUSTOM system prompt based on RPG system
 - Mock LLM pattern for orchestrator tests: `{ invoke: vi.fn(() => Promise.resolve({ content: '...' })) }` — only need `invoke` method, not full LangChain Runnable interface
 - Test import paths from `tests/services/llm/` need `../../../src/` (3 levels up)
+
+## T18 Patterns (Multiplayer Mode Handlers)
+
+- MultiplayerMode enum: 'sharedSession' | 'persistentWorld' | 'async'
+- SharedSessionHandler: DM-orchestrated turn-based, players act in turn order, actions queued per turn
+- PersistentWorldHandler: any player can act, no turn order, state persists in CampaignService
+- AsyncHandler: queue actions, DM resolves in batch with resolveActions()
+- MultiplayerHandlerFactory: creates handlers, supports mode switching with VALID_MODE_TRANSITIONS
+- Factory requires beforeEach to create new factory instance (not shared across tests)
+- SharedSession turn advances only clear pending actions when wrapping to new turn number (not when moving between players)

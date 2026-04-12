@@ -1847,7 +1847,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(bot): add command queue and rate limiter`
   - Files: `src/services/queue.ts`, `src/services/rate-limiter.ts`, `src/config/rate-limits.ts`, `tests/services/`
 
-- [ ] 18. Multiplayer Mode Handlers
+- [x] 18. Multiplayer Mode Handlers
 
   **What to do**:
   - Create `src/services/multiplayer/types.ts` — MultiplayerMode enum + interfaces
