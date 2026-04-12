@@ -159,10 +159,50 @@
 - CharacterService uses dependency injection with CharacterRepository interface — actual Prisma repo comes from T7
 - Experience (XP) stored in stats JSON as `experience` field, stripped before Zod validation since schemas don't include it
 - `withXp()` / `getXpFromStats()` / `stripXp()` helpers manage the experience field transparently
-- Custom system XP threshold formula: 50 * level * (level - 1) (cumulative)
+- Custom system XP threshold formula: 50 _ level _ (level - 1) (cumulative)
 - D&D 5e XP thresholds: standard SRD array [0, 300, 900, 2700, ...355000]
 - HP calculation: level 1 gets max hit die + con mod, subsequent levels get avg (floor(die/2)+1) + con mod, minimum 1 per level
 - Test import paths from `tests/services/character/stats/` need `../../../../src/` (4 levels up), from `tests/services/` need `../../src/` (2 levels up)
 - NotFoundError and ValidationError in `src/errors.ts` — shared error classes for services
 - Mock repository pattern: in-memory Map-based implementation for testing CharacterService without Prisma
 - Character Zod schema uses `z.string().uuid()` for id but Prisma generates CUIDs — discrepancy noted, not fixed in this task
+
+## T17 Patterns (Command Queue + Rate Limiter)
+
+- CommandQueue enqueue triggers async processing via queueMicrotask() — prevents synchronous execution from emptying queue before size() checks
+- Token bucket algorithm: tokens refill based on elapsed time intervals, not continuously
+- RateLimiter stores per-user, per-command-type buckets in a Map with composite key `${userId}:${commandType}`
+- getResetTime() calculates when bucket will be full enough for 1 token using ceiling of tokens needed / refill rate
+- Test import paths from `tests/services/` use `../../src/` (2 levels up)
+
+## T13 Patterns (Campaign & Story Engine Service)
+
+- CampaignService uses dependency injection with CampaignRepository interface — same pattern as CharacterService
+- CampaignState uses in-memory Map<string, Campaign> cache — NOT Redis, per spec
+- CampaignState.getActiveChannel() checks cache first, falls back to repo.findActiveByChannelId(), caches result
+- CampaignService.createCampaign validates mode against VALID_MODES array before Zod validation
+- CampaignService.joinCampaign checks players.includes(userId) before adding — throws ValidationError if already joined
+- CampaignService.leaveCampaign checks players.includes(userId) before removing — throws ValidationError if not in list
+- CampaignService.endCampaign invalidates cache after setting isActive=false
+- StoryService.createStory validates with StorySchema (requires UUID for id and campaignId)
+- StoryService.advanceScene: addScene → then update currentSceneIndex to scenes.length - 1
+- StoryService.summarizeStory is placeholder — concatenates scene descriptions (actual LLM in T14)
+- StoryService.rollbackScene: Math.max(0, currentSceneIndex - sceneCount)
+- Mock repo pattern: preserve id from input data (don't override with counter) — tests need predictable IDs for lookups
+- Test import paths from `tests/services/campaign/` need `../../../src/` (3 levels up)
+- Zod `z.string()` allows empty strings — use `z.string().min(1)` or type mismatch for validation error tests
+- CampaignRepository interface defined in state.ts (co-located with CampaignState) since service needs both
+
+## T14 Patterns (LLM Orchestration Service)
+
+- LLMOrchestrator uses dependency injection: ContextManager + BaseChatModel in constructor
+- Added `getCampaign()` public method to ContextManager (was only on MessageStore interface before)
+- Orchestrator calls `model.invoke([SystemMessage, HumanMessage])` directly instead of `prompt.pipe(model)` — simpler, more testable, avoids RunnableSequence mocking complexity
+- `invokeWithFallback()` pattern: try primary LLM → if fails and openRouter configured → try OpenRouter → if that also fails, throw original error
+- OpenRouter fallback creates real ChatOpenAI instance in constructor — can't easily mock in tests, so fallback tests verify error propagation only
+- Response parser uses regex patterns: `[roll:XdY+Z]` and `[state:key=value]` / `[state:key+N]`
+- `parseNarrativeResponse` strips markers AND cleans whitespace: replaces markers with single space, collapses multiple spaces, trims
+- Prompt templates use `{{variable}}` syntax with `interpolateTemplate()` for simple string replacement — compatible with but separate from LangChain's `{variable}` syntax
+- `createStoryPromptTemplate(rpgSystem)` selects DND5E or CUSTOM system prompt based on RPG system
+- Mock LLM pattern for orchestrator tests: `{ invoke: vi.fn(() => Promise.resolve({ content: '...' })) }` — only need `invoke` method, not full LangChain Runnable interface
+- Test import paths from `tests/services/llm/` need `../../../src/` (3 levels up)

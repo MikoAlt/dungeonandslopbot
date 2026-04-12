@@ -37,6 +37,15 @@
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
       "updated_at": "2026-04-12T09:15:18.309Z"
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "Campaign and Story Engine Service",
+      "session_id": "ses_27e7fd9e9ffej7FEXWUYROad7y",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-12T11:55:07.489Z"
     }
   }
 }

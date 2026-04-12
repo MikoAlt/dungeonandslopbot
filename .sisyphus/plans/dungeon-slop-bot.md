@@ -1485,7 +1485,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/services/llm/`, `tests/services/llm/`
   - Pre-commit: `bun test`
 
-- [ ] 13. Campaign and Story Engine Service
+- [x] 13. Campaign and Story Engine Service
 
   **What to do**:
   - Create `src/services/campaign.ts` — CampaignService:
@@ -1569,7 +1569,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(story): implement campaign and story engine service`
   - Files: `src/services/campaign.ts`, `src/services/story.ts`, `src/services/campaign/state.ts`, `tests/services/`
 
-- [ ] 14. LLM Orchestration Service
+- [x] 14. LLM Orchestration Service
 
   **What to do**:
   - Create `src/services/llm/orchestrator.ts` — LLMOrchestrator class:
@@ -1643,7 +1643,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(llm): implement LLM orchestration with context management`
   - Files: `src/services/llm/orchestrator.ts`, `src/services/llm/prompts.ts`, `src/services/llm/response.ts`, `tests/services/llm/`
 
-- [ ] 15. Dice and Math Expression Engine
+- [x] 15. Dice and Math Expression Engine
 
   **What to do**:
   - Create `src/services/rpg/dice-cli.ts` — Discord-friendly dice command handler:
@@ -1708,7 +1708,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(dice): implement dice and math expression engine`
   - Files: `src/services/rpg/dice-cli.ts`, `src/services/rpg/math-engine.ts`, `src/utils/random.ts`, `tests/services/rpg/`
 
-- [ ] 16. Embed Renderer (Character Sheets, Campaign Status, Battle UI)
+- [x] 16. Embed Renderer (Character Sheets, Campaign Status, Battle UI)
 
   **What to do**:
   - Create `src/embeds/renderers/character.ts` — Character embed renderer:
@@ -1790,7 +1790,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(ui): implement game embed renderers`
   - Files: `src/embeds/renderers/`, `tests/embeds/renderers/`
 
-- [ ] 17. Command Queue + Rate Limiter
+- [x] 17. Command Queue + Rate Limiter
 
   **What to do**:
   - Create `src/services/queue.ts` — CommandQueue (per-user FIFO queue, sequential execution per user, concurrent across users)

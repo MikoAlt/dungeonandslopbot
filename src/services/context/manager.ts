@@ -98,6 +98,10 @@ export class ContextManager {
     return true;
   }
 
+  getCampaign(campaignId: string): Campaign | undefined {
+    return this.store.getCampaign(campaignId);
+  }
+
   addMessage(campaignId: string, role: ChatMessage['role'], content: string): ChatMessage {
     const message = this.store.addMessage(campaignId, role, content);
     this.compressIfNeeded(campaignId);
