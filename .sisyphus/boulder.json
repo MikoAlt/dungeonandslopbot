@@ -55,6 +55,15 @@
       "agent": "Sisyphus-Junior",
       "category": "deep",
       "updated_at": "2026-04-12T12:25:37.509Z"
+    },
+    "todo:19": {
+      "task_key": "todo:19",
+      "task_label": "19",
+      "task_title": "Slash Commands — Character Management",
+      "session_id": "ses_27e577908ffeBUK5t1lUA2LxHA",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-12T12:39:11.720Z"
     }
   }
 }

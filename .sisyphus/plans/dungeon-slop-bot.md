@@ -1918,7 +1918,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(multiplayer): implement shared session, persistent world, async modes`
   - Files: `src/services/multiplayer/`, `tests/services/multiplayer/`
 
-- [ ] 19. Slash Commands — Character Management
+- [x] 19. Slash Commands — Character Management
 
   **What to do**:
   - Create character slash commands:
@@ -1981,7 +1981,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(commands): add character management slash commands`
   - Files: `src/commands/character/`, `tests/commands/character/`
 
-- [ ] 20. Slash Commands — Campaign and Story
+- [x] 20. Slash Commands — Campaign and Story
 
   **What to do**:
   - Create campaign slash commands:
@@ -2046,7 +2046,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(commands): add campaign and story slash commands`
   - Files: `src/commands/campaign/`, `src/commands/story/`, `tests/commands/`
 
-- [ ] 21. Slash Commands — Gameplay (Dice, Explore, Combat)
+- [x] 21. Slash Commands — Gameplay (Dice, Explore, Combat)
 
   **What to do**:
   - Create gameplay slash commands:
