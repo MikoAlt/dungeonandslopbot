@@ -10,7 +10,12 @@
     "start": "bun run dist/index.js",
     "test": "bun test",
     "lint": "eslint src/ tests/",
-    "migrate": "bunx prisma migrate dev"
+    "migrate": "bunx prisma migrate dev",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f bot",
+    "docker:restart": "docker compose restart bot"
   },
   "dependencies": {
     "discord.js": "^14",

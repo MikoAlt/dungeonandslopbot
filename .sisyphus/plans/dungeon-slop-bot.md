@@ -2177,7 +2177,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(integration): wire all services end-to-end`
   - Files: `src/wiring.ts`, `src/index.ts`, `src/events/`, `src/utils/logger.ts`, `tests/integration/`
 
-- [ ] 23. Docker Compose + Deployment Config
+- [x] 23. Docker Compose + Deployment Config
 
   **What to do**:
   - Update `docker-compose.yml` with full services:

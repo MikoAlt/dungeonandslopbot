@@ -15,10 +15,8 @@ services:
     container_name: dungeon-and-slop-db
     environment:
       POSTGRES_USER: dungeonbot
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: dungeonandslop
-    ports:
-      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.git/
+.sisyphus/
+.env
+*.log
+README.md
+tests/
+coverage/

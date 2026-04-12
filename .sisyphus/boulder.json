@@ -73,6 +73,15 @@
       "agent": "Sisyphus-Junior",
       "category": "deep",
       "updated_at": "2026-04-12T12:53:27.979Z"
+    },
+    "todo:23": {
+      "task_key": "todo:23",
+      "task_label": "23",
+      "task_title": "Docker Compose + Deployment Config",
+      "session_id": "ses_27e3e2199ffeLonJSbfyIwHJ5G",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-12T12:56:03.945Z"
     }
   }
 }
