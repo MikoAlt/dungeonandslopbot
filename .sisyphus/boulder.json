@@ -64,6 +64,15 @@
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
       "updated_at": "2026-04-12T12:39:11.720Z"
+    },
+    "todo:22": {
+      "task_key": "todo:22",
+      "task_label": "22",
+      "task_title": "End-to-End Integration + Bot Wiring",
+      "session_id": "ses_27e48b90cffeey2WNvjlgCx1Sv",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-12T12:53:27.979Z"
     }
   }
 }

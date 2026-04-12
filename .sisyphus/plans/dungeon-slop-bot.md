@@ -2114,7 +2114,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Message: `feat(commands): add gameplay slash commands`
   - Files: `src/commands/gameplay/`, `tests/commands/gameplay/`
 
-- [ ] 22. End-to-End Integration + Bot Wiring
+- [x] 22. End-to-End Integration + Bot Wiring
 
   **What to do**:
   - Create `src/wiring.ts` — Dependency injection (manual, not framework):
