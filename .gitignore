@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+out/
+*.tgz
+
+# environment
+.env
+.env.*
+!.env.example
+
+# database
+*.db
+*.db-journal
+
+# prisma
+prisma/migrations/
+
+# code coverage
+coverage/
+*.lcov
+
+# logs
+logs/
+*.log
+
+# caches
+.eslintcache
+.cache/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.DS_Store
+/src/generated/prisma

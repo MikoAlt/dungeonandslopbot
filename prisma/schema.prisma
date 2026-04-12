@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RpgSystem {
+  dnd5e
+  custom
+}
+
+enum CampaignMode {
+  sharedSession
+  persistentWorld
+  async
+}
+
+enum MessageRole {
+  system
+  user
+  assistant
+}
+
+model User {
+  id         String   @id @default(cuid())
+  discordId  String   @unique
+  username   String
+  characters Character[]
+  dmCampaigns Campaign[] @relation("DmCampaigns")
+  messages   Message[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Character {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  name       String
+  class      String
+  level      Int         @default(1)
+  hp         Int
+  maxHp      Int
+  rpgSystem  RpgSystem
+  stats      Json
+  inventory  Json        @default("[]")
+  backstory  String?
+  campaignId String?
+  campaign   Campaign?   @relation(fields: [campaignId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Campaign {
+  id          String       @id @default(cuid())
+  name        String
+  description String       @default("")
+  rpgSystem   RpgSystem
+  mode        CampaignMode
+  dmUserId    String
+  dm          User         @relation("DmCampaigns", fields: [dmUserId], references: [id])
+  guildId     String
+  channelId   String
+  worldState  Json         @default("{}")
+  isActive    Boolean      @default(true)
+  players     String[]     @default([])
+  characters  Character[]
+  stories     Story[]
+  messages    Message[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Story {
+  id               String   @id @default(cuid())
+  campaignId       String
+  campaign         Campaign @relation(fields: [campaignId], references: [id])
+  scenes           Json     @default("[]")
+  currentSceneIndex Int     @default(0)
+  summary          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Message {
+  id         String      @id @default(cuid())
+  campaignId String
+  campaign   Campaign    @relation(fields: [campaignId], references: [id])
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  role       MessageRole
+  content    String
+  tokenCount Int         @default(0)
+  metadata   Json        @default("{}")
+  embedding  Embedding?
+  createdAt  DateTime    @default(now())
+}
+
+model Embedding {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  message   Message  @relation(fields: [messageId], references: [id])
+  embedding Unsupported("vector(1536)")
+  content   String
+  createdAt DateTime @default(now())
+}
