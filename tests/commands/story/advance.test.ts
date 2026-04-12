@@ -109,12 +109,25 @@ describe('story advance command', () => {
     };
   });
 
+  const mockServices = {
+    campaignRepo: {
+      findActiveByChannelId: mockFindActiveByChannelId,
+      findById: mockFindById,
+    },
+    storyService: {
+      advanceScene: mockAdvanceScene,
+    },
+    llmOrchestrator: {
+      generateStory: mockGenerateStory,
+    },
+  } as any;
+
   it('defers reply with public response', async () => {
     mockFindActiveByChannelId.mockResolvedValue({ id: 'campaign-123' });
     mockFindById.mockResolvedValue({ id: 'campaign-123' });
 
     const command = storyAdvanceCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.deferReply).toHaveBeenCalledWith();
   });
@@ -124,7 +137,7 @@ describe('story advance command', () => {
     mockFindById.mockResolvedValue({ id: 'campaign-123' });
 
     const command = storyAdvanceCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockAdvanceScene).toHaveBeenCalledWith(
       'campaign-123',
@@ -140,7 +153,7 @@ describe('story advance command', () => {
     mockFindById.mockResolvedValue({ id: 'campaign-123' });
 
     const command = storyAdvanceCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -153,7 +166,7 @@ describe('story advance command', () => {
     mockFindActiveByChannelId.mockResolvedValue(null);
 
     const command = storyAdvanceCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
