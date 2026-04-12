@@ -30,6 +30,39 @@ export const StoryAdvanceInputSchema = z.object({
 });
 export type StoryAdvanceInput = z.infer<typeof StoryAdvanceInputSchema>;
 
+export const CharacterListInputSchema = z.object({
+  userId: z.string(),
+  campaignId: z.string().optional(),
+});
+export type CharacterListInput = z.infer<typeof CharacterListInputSchema>;
+
+export const CharacterUpdateInputSchema = z.object({
+  id: z.string(),
+  updates: z.record(z.unknown()),
+});
+export type CharacterUpdateInput = z.infer<typeof CharacterUpdateInputSchema>;
+
+export const CampaignGetInputSchema = z.object({
+  id: z.string(),
+});
+export type CampaignGetInput = z.infer<typeof CampaignGetInputSchema>;
+
+export const CampaignListInputSchema = z.object({
+  guildId: z.string(),
+});
+export type CampaignListInput = z.infer<typeof CampaignListInputSchema>;
+
+export const CampaignUpdateWorldStateInputSchema = z.object({
+  id: z.string(),
+  worldState: z.record(z.unknown()),
+});
+export type CampaignUpdateWorldStateInput = z.infer<typeof CampaignUpdateWorldStateInputSchema>;
+
+export const StoryGetInputSchema = z.object({
+  campaignId: z.string(),
+});
+export type StoryGetInput = z.infer<typeof StoryGetInputSchema>;
+
 export const DiceRollInputSchema = z.object({
   notation: z.string(),
   modifier: z.number().optional(),
@@ -40,4 +73,5 @@ export const RESOURCE_URI_PATTERNS = {
   campaign: 'dungeon://campaigns/{id}',
   character: 'dungeon://characters/{id}',
   story: 'dungeon://stories/{id}',
+  worldState: 'dungeon://campaigns/{id}/world-state',
 } as const;

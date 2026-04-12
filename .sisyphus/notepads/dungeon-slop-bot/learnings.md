@@ -88,3 +88,81 @@
 - addFieldToCurrentEmbed checks both field count AND accumulated embed length to prevent oversized embeds
 - build() should only include currentEmbed in result if it has actual content (title/description/fields)
 - Footer should only be set on the LAST embed (iterate result, set footer on result[result.length-1])
+
+## T10 Patterns (Context Manager)
+
+- Test imports from `tests/services/context/` need `../../../src/` (3 levels up, not 2)
+- Bun resolves `.ts` imports directly — no `.js` extension needed in test imports
+- Source files use `.js` extensions in their own imports (ESM compatibility)
+- Token counting heuristic: Math.ceil(text.length / 4) — 4 chars ≈ 1 token
+- truncateToTokens breaks at newline (>80% threshold), then space (>80%), then hard cut
+- MessageStore interface enables testability — mock store for unit tests without DB
+- ContextManager.selectRecentMessages sorts newest-first, accumulates until budget exhausted, then reverses
+- Compression: summarize older messages → append to worldState.events, keep recent window
+- selectRelevantHistory is placeholder (returns []) — actual pgvector impl in T7
+- summarizeMessages is placeholder (concatenates) — actual LLM impl in T14
+- isWithinBudget checks against MAX_CONTEXT - RESPONSE_HEADROOM (28000 usable tokens)
+
+## T11 Patterns (MCP Tools & Resources)
+
+- Custom protocol URLs (dungeon://) parse with hostname as the first segment and pathname starting with /
+  - e.g., dungeon://campaigns/camp_123 → hostname: "campaigns", pathname: "/camp_123"
+  - Extract ID from pathname with .replace(/^\//, '') to strip leading slash
+  - For nested paths like dungeon://campaigns/camp_abc/world-state → pathname: "/camp_abc/world-state"
+- Separate handlers.ts from tools.ts/resources.ts for testability — handlers are pure functions, easy to unit test
+- registerTools() and registerResources() as separate functions called from createMcpServer() keeps server.ts clean
+- Placeholder handlers return { content: [{ type: "text", text: JSON.stringify({...}) }] } pattern for deferred service wiring
+- Resource handlers receive URL object — parse ID from pathname, not from hostname
+- Export errorResponse helper for testing validation error flows
+- z.record(z.unknown()) for flexible update payloads (character updates, world state)
+- All 11 tools + 4 resources registered, 72 tests passing
+
+## T9 Patterns (RPG System Engine)
+
+- Bun test import paths: from `tests/services/rpg/` use `../../../src/` (3 levels up), not `../../src/`
+- `noUncheckedIndexedAccess` in tsconfig means array bracket access returns `T | undefined` — use direct values or non-null assertions
+- Regex match groups are `string | undefined` in strict mode — always null-check before use
+- D&D 5e ability modifier uses `Math.floor` (round down), NOT `Math.trunc` (round toward zero) — they differ for negative numbers
+- Custom Simple system is genuinely different from D&D: hp/attack/defense/speed/special vs ability scores, level-up choices (hp/attack/defense) vs ASI, attack vs defense damage model vs AC model
+- RPGEngine interface uses generic type parameter for stats type, with overloaded `getEngine()` signatures for type-safe factory
+- Test randomness: use conditional checks (e.g., `if (result.attackRoll === 20)`) rather than mocking for dice rolls
+
+## T7 Patterns (Database Repositories)
+
+- BaseRepository uses callback-based operations pattern — Prisma delegate types are too complex for a simple interface due to SelectSubset generics
+- Pass arrow functions wrapping Prisma calls to BaseRepository constructor: `findUnique: (id) => prisma.character.findUnique({ where: { id } })`
+- EmbeddingRepository doesn't extend BaseRepository — uses $queryRaw for pgvector operations (create, similarity search)
+- Embedding model has Unsupported("vector(1536)") — can't use Prisma's create(), must use $queryRaw INSERT with ::vector cast
+- $queryRaw returns arrays — always extract first element for single-row results
+- Campaign players field is String[] — use spread + filter for addPlayer/removePlayer
+- Story findByCampaignId uses findMany + take:1 since campaignId is not unique
+- Message deleteOldMessages uses deleteMany (not delete) — returns { count } not the deleted records
+- Mock PrismaClient with vi.mock() matching import path in test file (e.g., '../../../src/generated/prisma/client.js')
+- Test mock pattern: vi.fn().mockResolvedValue() for async methods, vi.clearAllMocks() in beforeEach
+
+## T12 Patterns (LangChain.js Integration)
+
+- ChatOpenAI from @langchain/openai: use `configuration.basePath` for custom endpoint URL (not direct `baseUrl` param)
+- ChatOpenAI property is `llm.model` (not `llm.modelName`) — `modelName` is the constructor kwarg, `model` is the runtime property
+- LangChain `tool()` function from `@langchain/core/tools` uses Zod schemas for input validation — tool receives parsed input object
+- Optional Zod fields in tool schemas: `input.modifier` is `undefined` when not provided, not `0` — use `?? 0` for defaults
+- BufferMemory from `langchain/memory` with ChatMessageHistory for simple conversation storage — ConversationSummaryMemory deferred (requires LLM calls)
+- ChatPromptTemplate.fromMessages() with SystemMessagePromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate for structured prompts
+- BaseChatModel doesn't have `bindTools()` — use ChatOpenAI directly for chains that need tool binding
+- `@langchain/openai` was already in node_modules (dependency of `langchain`) — no separate install needed
+- Tool `invoke()` works with plain objects matching the Zod schema — no need for special wrapping
+- Chain = prompt.pipe(llm) or prompt.pipe(llm.bindTools(tools)) — returns RunnableLambda for composition
+
+## T8 Patterns (Character Service)
+
+- D&D 5e ability modifier uses Math.floor (round toward negative infinity), NOT Math.trunc (round toward zero). Score 9 → modifier -1, score 7 → modifier -2. The task spec said "rounding toward zero" but actual D&D 5e and Python `//` both round down.
+- CharacterService uses dependency injection with CharacterRepository interface — actual Prisma repo comes from T7
+- Experience (XP) stored in stats JSON as `experience` field, stripped before Zod validation since schemas don't include it
+- `withXp()` / `getXpFromStats()` / `stripXp()` helpers manage the experience field transparently
+- Custom system XP threshold formula: 50 * level * (level - 1) (cumulative)
+- D&D 5e XP thresholds: standard SRD array [0, 300, 900, 2700, ...355000]
+- HP calculation: level 1 gets max hit die + con mod, subsequent levels get avg (floor(die/2)+1) + con mod, minimum 1 per level
+- Test import paths from `tests/services/character/stats/` need `../../../../src/` (4 levels up), from `tests/services/` need `../../src/` (2 levels up)
+- NotFoundError and ValidationError in `src/errors.ts` — shared error classes for services
+- Mock repository pattern: in-memory Map-based implementation for testing CharacterService without Prisma
+- Character Zod schema uses `z.string().uuid()` for id but Prisma generates CUIDs — discrepancy noted, not fixed in this task

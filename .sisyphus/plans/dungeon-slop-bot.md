@@ -829,7 +829,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
 - Pre-commit: `bun test`
 
-- [ ] 7. Database Repositories (Character, Campaign, Story)
+- [x] 7. Database Repositories (Character, Campaign, Story)
 
   **What to do**:
   - Create `src/db/prisma.ts` — singleton Prisma client instance
@@ -946,7 +946,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/db/`, `tests/db/repositories/`
   - Pre-commit: `bun test`
 
-- [ ] 8. Character Service (Create, Stats, Inventory)
+- [x] 8. Character Service (Create, Stats, Inventory)
 
   **What to do**:
   - Create `src/services/character.ts` — CharacterService class:
@@ -1050,7 +1050,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/services/character/`, `tests/services/character/`
   - Pre-commit: `bun test`
 
-- [ ] 9. RPG System Engine (D&D 5e + Custom Simple)
+- [x] 9. RPG System Engine (D&D 5e + Custom Simple)
 
   **What to do**:
   - Create `src/services/rpg/engine.ts` — RPGEngine interface and factory:
@@ -1161,7 +1161,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/services/rpg/`, `tests/services/rpg/`
   - Pre-commit: `bun test`
 
-- [ ] 10. Context Manager (Token Counting, Compression)
+- [x] 10. Context Manager (Token Counting, Compression)
 
   **What to do**:
   - Create `src/services/context/tokenizer.ts` — Token counting utility:
@@ -1274,7 +1274,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/services/context/`, `tests/services/context/`
   - Pre-commit: `bun test`
 
-- [ ] 11. MCP Tools and Resources Registration
+- [x] 11. MCP Tools and Resources Registration
 
   **What to do**:
   - Register all MCP tools on the server scaffolded in T6:
@@ -1380,7 +1380,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `src/mcp/`, `tests/mcp/`
   - Pre-commit: `bun test`
 
-- [ ] 12. LangChain.js Integration + Tools Setup
+- [x] 12. LangChain.js Integration + Tools Setup
 
   **What to do**:
   - Install LangChain.js dependencies: `@langchain/core`, `langchain`, `@langchain/community`

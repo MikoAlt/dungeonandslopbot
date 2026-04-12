@@ -1,5 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { PingInputSchema } from './types.js';
+import { registerTools } from './tools.js';
+import { registerResources } from './resources.js';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -9,6 +11,8 @@ export function createMcpServer(): McpServer {
 
   registerPlaceholderTools(server);
   registerPlaceholderResources(server);
+  registerTools(server);
+  registerResources(server);
 
   return server;
 }

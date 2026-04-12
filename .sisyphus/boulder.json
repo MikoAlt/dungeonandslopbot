@@ -2,10 +2,20 @@
   "active_plan": "/home/miko/workspace/dungeonandslopbot/.sisyphus/plans/dungeon-slop-bot.md",
   "started_at": "2026-04-12T07:37:51.236Z",
   "session_ids": [
-    "ses_27f9a9ebaffegtjb8LzaRupKYc"
+    "ses_27f9a9ebaffegtjb8LzaRupKYc",
+    "ses_27f3685edffeEcTAMloFa7ma6a",
+    "ses_27f35bba5ffeJOyMP6DkcEe42R",
+    "ses_27f3507bfffe6iV92H9TRm0Paz",
+    "ses_27f345349ffecnEtXYiHStwlDV",
+    "ses_27f3397dbffeWmOfECaXeYuMqC"
   ],
   "session_origins": {
-    "ses_27f9a9ebaffegtjb8LzaRupKYc": "direct"
+    "ses_27f9a9ebaffegtjb8LzaRupKYc": "direct",
+    "ses_27f3685edffeEcTAMloFa7ma6a": "appended",
+    "ses_27f35bba5ffeJOyMP6DkcEe42R": "appended",
+    "ses_27f3507bfffe6iV92H9TRm0Paz": "appended",
+    "ses_27f345349ffecnEtXYiHStwlDV": "appended",
+    "ses_27f3397dbffeWmOfECaXeYuMqC": "appended"
   },
   "plan_name": "dungeon-slop-bot",
   "agent": "atlas",
@@ -18,6 +28,15 @@
       "agent": "Sisyphus-Junior",
       "category": "quick",
       "updated_at": "2026-04-12T08:01:48.208Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Database Repositories (Character, Campaign, Story)",
+      "session_id": "ses_27f296b14ffesb5un8339cVu4B",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-12T09:15:18.309Z"
     }
   }
 }
