@@ -1,9 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types/command.js';
-import { CharacterService } from '../../services/character.js';
-import { CharacterRepository } from '../../db/repositories/character.js';
 import { renderCharacterSheet, renderCharacterMini } from '../../embeds/renderers/character.js';
-import { prisma } from '../../db/prisma.js';
+import type { AppContainer } from '../../wiring.js';
 
 const data = new SlashCommandBuilder()
   .setName('character')
@@ -60,6 +58,7 @@ const data = new SlashCommandBuilder()
           .addChoices(
             { name: 'Add Item', value: 'add-item' },
             { name: 'Remove Item', value: 'remove-item' },
+            { name: 'Update Backstory', value: 'backstory' },
           )
           .setRequired(true),
       )
@@ -80,6 +79,12 @@ const data = new SlashCommandBuilder()
           .setName('description')
           .setDescription('Item description (for add item)')
           .setRequired(false),
+      )
+      .addStringOption((option) =>
+        option
+          .setName('backstory-text')
+          .setDescription('Character backstory (for update backstory)')
+          .setRequired(false),
       ),
   )
   .addSubcommand((subcommand) =>
@@ -96,13 +101,19 @@ const data = new SlashCommandBuilder()
 
 export default {
   data: data as SlashCommandBuilder,
-  async execute(interaction) {
+  async execute(interaction, services?: AppContainer) {
     await interaction.deferReply({ ephemeral: true });
+
+    if (!services?.characterService) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
 
     const subcommand = interaction.options.getSubcommand();
     const userId = interaction.user.id;
-    const repo = new CharacterRepository(prisma);
-    const characterService = new CharacterService(repo);
+    const characterService = services.characterService;
 
     switch (subcommand) {
       case 'create': {
@@ -168,7 +179,10 @@ export default {
 
       case 'update': {
         const characterId = interaction.options.getString('character-id', true);
-        const action = interaction.options.getString('action', true) as 'add-item' | 'remove-item';
+        const action = interaction.options.getString('action', true) as
+          | 'add-item'
+          | 'remove-item'
+          | 'backstory';
 
         const character = await characterService.getCharacter(characterId);
 
@@ -190,6 +204,19 @@ export default {
           const newItem = { name: itemName, quantity, description };
           const updatedInventory = [...character.inventory, newItem];
           const updated = await characterService.updateInventory(characterId, updatedInventory);
+          const embeds = renderCharacterSheet(updated);
+          await interaction.editReply({ embeds });
+        } else if (action === 'backstory') {
+          const backstoryText = interaction.options.getString('backstory-text');
+
+          if (!backstoryText) {
+            await interaction.editReply({
+              content: 'Backstory text is required for backstory action.',
+            });
+            return;
+          }
+
+          const updated = await characterService.updateBackstory(characterId, backstoryText);
           const embeds = renderCharacterSheet(updated);
           await interaction.editReply({ embeds });
         } else if (action === 'remove-item') {

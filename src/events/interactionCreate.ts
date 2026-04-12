@@ -7,6 +7,7 @@ import {
 import type { Command } from '../types/command.js';
 import { CommandType } from '../config/rate-limits.js';
 import { Logger } from '../utils/logger.js';
+import type { AppContainer } from '../wiring.js';
 
 const COMMAND_TYPE_MAP: Record<string, (typeof CommandType)[keyof typeof CommandType]> = {
   dice: CommandType.DICE,
@@ -34,6 +35,7 @@ function getCommandType(commandName: string): (typeof CommandType)[keyof typeof 
 
 export function createInteractionHandler(
   commands: Map<string, Command>,
+  container: AppContainer,
   rateLimiter: {
     consume: (
       userId: string,
@@ -78,7 +80,7 @@ export function createInteractionHandler(
         id: `${interaction.commandName}-${Date.now()}`,
         execute: async () => {
           try {
-            await command.execute(interaction);
+            await command.execute(interaction, container);
           } catch (error) {
             logger.error('Command', `Error executing command ${interaction.commandName}`, error);
             const content =

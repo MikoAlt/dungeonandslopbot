@@ -20,8 +20,11 @@ vi.mock('../../../src/services/story', () => ({
 vi.mock('../../../src/db/repositories/story', () => ({
   StoryRepository: vi.fn().mockImplementation(() => ({
     findByCampaignId: vi.fn(),
+    findById: vi.fn(),
     create: vi.fn(),
     addScene: vi.fn(),
+    updateSummary: vi.fn(),
+    getCurrentScene: vi.fn(),
   })),
 }));
 

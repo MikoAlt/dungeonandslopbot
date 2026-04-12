@@ -5,6 +5,9 @@ import { renderBattleState, renderAttackResult } from '../../embeds/renderers/ba
 import { getEngine } from '../../services/rpg/engine.js';
 import { abilityModifier } from '../../services/rpg/dnd5e.js';
 import type { DnD5eStats, CustomSimpleStats } from '../../types/character.js';
+import type { CombatRepository } from '../../db/repositories/combat.js';
+import type { CombatModel } from '../../db/repositories/combat.js';
+import type { AppContainer } from '../../wiring.js';
 
 interface CombatParticipant {
   characterId: string;
@@ -26,9 +29,19 @@ interface CombatState {
 }
 
 class CombatManager {
-  private combats: Map<string, CombatState> = new Map();
+  constructor(private combatRepository: CombatRepository) {}
 
-  startCombat(
+  private toCombatState(model: CombatModel): CombatState {
+    return {
+      campaignId: model.campaignId,
+      participants: model.participants as CombatParticipant[],
+      currentTurnIndex: model.currentTurnIndex,
+      round: model.round,
+      isActive: model.isActive,
+    };
+  }
+
+  async startCombat(
     campaignId: string,
     characters: Array<{
       id: string;
@@ -38,9 +51,9 @@ class CombatManager {
       stats: unknown;
       rpgSystem: 'dnd5e' | 'custom';
     }>,
-  ): CombatState {
-    const existing = this.combats.get(campaignId);
-    if (existing?.isActive) {
+  ): Promise<CombatState> {
+    const existing = await this.combatRepository.findActiveByCampaignId(campaignId);
+    if (existing) {
       throw new Error('Combat already active in this campaign');
     }
 
@@ -68,73 +81,100 @@ class CombatManager {
 
     participants.sort((a, b) => b.initiative - a.initiative);
 
-    const combat: CombatState = {
+    const combat = await this.combatRepository.create({
       campaignId,
       participants,
       currentTurnIndex: 0,
       round: 1,
       isActive: true,
-    };
+    });
 
-    this.combats.set(campaignId, combat);
-    return combat;
+    return this.toCombatState(combat);
   }
 
-  getCombat(campaignId: string): CombatState | undefined {
-    return this.combats.get(campaignId);
+  async getCombat(campaignId: string): Promise<CombatState | undefined> {
+    const combat = await this.combatRepository.findActiveByCampaignId(campaignId);
+    return combat ? this.toCombatState(combat) : undefined;
   }
 
-  getCurrentParticipant(campaignId: string): CombatParticipant | undefined {
-    const combat = this.combats.get(campaignId);
+  async getCurrentParticipant(campaignId: string): Promise<CombatParticipant | undefined> {
+    const combat = await this.getCombat(campaignId);
     if (!combat || !combat.isActive) return undefined;
     return combat.participants[combat.currentTurnIndex];
   }
 
-  endCombat(campaignId: string): CombatState | undefined {
-    const combat = this.combats.get(campaignId);
+  async endCombat(campaignId: string): Promise<CombatState | undefined> {
+    const combat = await this.combatRepository.findActiveByCampaignId(campaignId);
     if (!combat) return undefined;
-    combat.isActive = false;
-    this.combats.delete(campaignId);
-    return combat;
+
+    const deactivated = await this.combatRepository.deactivate(combat.id);
+    return this.toCombatState(deactivated);
   }
 
-  nextTurn(campaignId: string): CombatParticipant | undefined {
-    const combat = this.combats.get(campaignId);
+  async nextTurn(campaignId: string): Promise<CombatParticipant | undefined> {
+    const combat = await this.combatRepository.findActiveByCampaignId(campaignId);
     if (!combat || !combat.isActive) return undefined;
 
-    combat.currentTurnIndex++;
-    if (combat.currentTurnIndex >= combat.participants.length) {
-      combat.currentTurnIndex = 0;
-      combat.round++;
+    const participants = combat.participants as CombatParticipant[];
+    let nextTurnIndex = combat.currentTurnIndex + 1;
+    let nextRound = combat.round;
+
+    if (nextTurnIndex >= participants.length) {
+      nextTurnIndex = 0;
+      nextRound++;
     }
 
-    return combat.participants[combat.currentTurnIndex];
+    await this.combatRepository.updateParticipants(
+      combat.id,
+      participants,
+      nextTurnIndex,
+      nextRound,
+    );
+
+    return participants[nextTurnIndex];
   }
 
-  setDefending(campaignId: string, characterId: string, defending: boolean): void {
-    const combat = this.combats.get(campaignId);
+  async setDefending(campaignId: string, characterId: string, defending: boolean): Promise<void> {
+    const combat = await this.combatRepository.findActiveByCampaignId(campaignId);
     if (!combat || !combat.isActive) return;
 
-    const participant = combat.participants.find((p) => p.characterId === characterId);
+    const participants = combat.participants as CombatParticipant[];
+    const participant = participants.find((p) => p.characterId === characterId);
     if (participant) {
       participant.isDefending = defending;
+      await this.combatRepository.updateParticipants(
+        combat.id,
+        participants,
+        combat.currentTurnIndex,
+        combat.round,
+      );
     }
   }
 
-  applyDamage(campaignId: string, characterId: string, damage: number): number {
-    const combat = this.combats.get(campaignId);
+  async applyDamage(campaignId: string, characterId: string, damage: number): Promise<number> {
+    const combat = await this.combatRepository.findActiveByCampaignId(campaignId);
     if (!combat || !combat.isActive) return 0;
 
-    const participant = combat.participants.find((p) => p.characterId === characterId);
+    const participants = combat.participants as CombatParticipant[];
+    const participant = participants.find((p) => p.characterId === characterId);
     if (!participant) return 0;
 
     const actualDamage = participant.isDefending ? Math.floor(damage / 2) : damage;
     participant.hp = Math.max(0, participant.hp - actualDamage);
+
+    await this.combatRepository.updateParticipants(
+      combat.id,
+      participants,
+      combat.currentTurnIndex,
+      combat.round,
+    );
+
     return actualDamage;
   }
 }
 
-const combatManager = new CombatManager();
+export type { CombatState, CombatParticipant };
+export { CombatManager };
 
 export interface CombatCommandServices {
   getCharactersByCampaignId?(campaignId: string): Promise<
@@ -147,6 +187,7 @@ export interface CombatCommandServices {
       rpgSystem: 'dnd5e' | 'custom';
     }>
   >;
+  combatManager: CombatManager;
 }
 
 export default {
@@ -206,26 +247,49 @@ export default {
         ),
     ),
 
-  async execute(interaction, services?: CombatCommandServices) {
+  async execute(interaction, container?: AppContainer) {
     await interaction.deferReply();
+
+    if (!container?.combatRepo) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
+
+    const combatManager = new CombatManager(container.combatRepo);
+    const combatCommandServices: CombatCommandServices = {
+      getCharactersByCampaignId: async (campaignId) => {
+        const characters = await container.characterRepo.findByCampaignId(campaignId);
+        return characters.map((c) => ({
+          id: c.id,
+          name: c.name,
+          hp: c.hp,
+          maxHp: c.maxHp,
+          stats: c.stats as unknown,
+          rpgSystem: c.rpgSystem as 'dnd5e' | 'custom',
+        }));
+      },
+      combatManager,
+    };
 
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
       case 'start':
-        await handleCombatStart(interaction, services);
+        await handleCombatStart(interaction, combatCommandServices);
         break;
       case 'attack':
-        await handleCombatAttack(interaction);
+        await handleCombatAttack(interaction, combatCommandServices);
         break;
       case 'defend':
-        await handleCombatDefend(interaction);
+        await handleCombatDefend(interaction, combatCommandServices);
         break;
       case 'cast':
-        await handleCombatCast(interaction);
+        await handleCombatCast(interaction, combatCommandServices);
         break;
       case 'end':
-        await handleCombatEnd(interaction);
+        await handleCombatEnd(interaction, combatCommandServices);
         break;
       default:
         await interaction.editReply({ content: 'Invalid subcommand' });
@@ -233,12 +297,12 @@ export default {
   },
 } satisfies Command;
 
-async function handleCombatStart(interaction: any, services?: CombatCommandServices) {
+async function handleCombatStart(interaction: any, services: CombatCommandServices) {
   const campaignId = interaction.options.getString('campaign-id', true);
 
-  if (!services?.getCharactersByCampaignId) {
+  if (!services?.getCharactersByCampaignId || !services?.combatManager) {
     await interaction.editReply({
-      content: '❌ Character service not available. Please try again later.',
+      content: '❌ Combat service not available. Please try again later.',
     });
     return;
   }
@@ -253,7 +317,7 @@ async function handleCombatStart(interaction: any, services?: CombatCommandServi
       return;
     }
 
-    const combat = combatManager.startCombat(campaignId, characters);
+    const combat = await services.combatManager.startCombat(campaignId, characters);
 
     const participants = combat.participants.map((p) => ({
       name: p.name,
@@ -272,11 +336,18 @@ async function handleCombatStart(interaction: any, services?: CombatCommandServi
   }
 }
 
-async function handleCombatAttack(interaction: any) {
+async function handleCombatAttack(interaction: any, services: CombatCommandServices) {
   const campaignId = interaction.options.getString('campaign-id', true);
   const targetName = interaction.options.getString('target', true);
 
-  const combat = combatManager.getCombat(campaignId);
+  if (!services?.combatManager) {
+    await interaction.editReply({
+      content: '❌ Combat service not available. Please try again later.',
+    });
+    return;
+  }
+
+  const combat = await services.combatManager.getCombat(campaignId);
   if (!combat || !combat.isActive) {
     await interaction.editReply({
       content: '❌ No active combat in this campaign. Use `/combat start` to begin.',
@@ -284,7 +355,7 @@ async function handleCombatAttack(interaction: any) {
     return;
   }
 
-  const attacker = combatManager.getCurrentParticipant(campaignId);
+  const attacker = await services.combatManager.getCurrentParticipant(campaignId);
   if (!attacker) {
     await interaction.editReply({ content: '❌ No active combatant.' });
     return;
@@ -336,7 +407,7 @@ async function handleCombatAttack(interaction: any) {
 
     let damageDealt = 0;
     if (attackResult.hit) {
-      damageDealt = combatManager.applyDamage(
+      damageDealt = await services.combatManager.applyDamage(
         campaignId,
         target.characterId,
         attackResult.damageTotal,
@@ -357,17 +428,24 @@ async function handleCombatAttack(interaction: any) {
     const embeds = renderAttackResult(result);
     await interaction.editReply({ embeds: [embeds] });
 
-    combatManager.nextTurn(campaignId);
+    await services.combatManager.nextTurn(campaignId);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Attack failed';
     await interaction.editReply({ content: `❌ ${message}` });
   }
 }
 
-async function handleCombatDefend(interaction: any) {
+async function handleCombatDefend(interaction: any, services: CombatCommandServices) {
   const campaignId = interaction.options.getString('campaign-id', true);
 
-  const combat = combatManager.getCombat(campaignId);
+  if (!services?.combatManager) {
+    await interaction.editReply({
+      content: '❌ Combat service not available. Please try again later.',
+    });
+    return;
+  }
+
+  const combat = await services.combatManager.getCombat(campaignId);
   if (!combat || !combat.isActive) {
     await interaction.editReply({
       content: '❌ No active combat in this campaign. Use `/combat start` to begin.',
@@ -375,13 +453,13 @@ async function handleCombatDefend(interaction: any) {
     return;
   }
 
-  const participant = combatManager.getCurrentParticipant(campaignId);
+  const participant = await services.combatManager.getCurrentParticipant(campaignId);
   if (!participant) {
     await interaction.editReply({ content: '❌ No active combatant.' });
     return;
   }
 
-  combatManager.setDefending(campaignId, participant.characterId, true);
+  await services.combatManager.setDefending(campaignId, participant.characterId, true);
 
   const embed = new EmbedBuilder()
     .setTitle(`🛡️ ${participant.name} takes a defensive stance!`)
@@ -390,15 +468,22 @@ async function handleCombatDefend(interaction: any) {
 
   await interaction.editReply({ embeds: [embed] });
 
-  combatManager.nextTurn(campaignId);
+  await services.combatManager.nextTurn(campaignId);
 }
 
-async function handleCombatCast(interaction: any) {
+async function handleCombatCast(interaction: any, services: CombatCommandServices) {
   const campaignId = interaction.options.getString('campaign-id', true);
   const spellName = interaction.options.getString('spell-name', true);
   const targetName = interaction.options.getString('target');
 
-  const combat = combatManager.getCombat(campaignId);
+  if (!services?.combatManager) {
+    await interaction.editReply({
+      content: '❌ Combat service not available. Please try again later.',
+    });
+    return;
+  }
+
+  const combat = await services.combatManager.getCombat(campaignId);
   if (!combat || !combat.isActive) {
     await interaction.editReply({
       content: '❌ No active combat in this campaign. Use `/combat start` to begin.',
@@ -406,7 +491,7 @@ async function handleCombatCast(interaction: any) {
     return;
   }
 
-  const participant = combatManager.getCurrentParticipant(campaignId);
+  const participant = await services.combatManager.getCurrentParticipant(campaignId);
   if (!participant) {
     await interaction.editReply({ content: '❌ No active combatant.' });
     return;
@@ -425,13 +510,20 @@ async function handleCombatCast(interaction: any) {
 
   await interaction.editReply({ embeds: [embed] });
 
-  combatManager.nextTurn(campaignId);
+  await services.combatManager.nextTurn(campaignId);
 }
 
-async function handleCombatEnd(interaction: any) {
+async function handleCombatEnd(interaction: any, services: CombatCommandServices) {
   const campaignId = interaction.options.getString('campaign-id', true);
 
-  const combat = combatManager.getCombat(campaignId);
+  if (!services?.combatManager) {
+    await interaction.editReply({
+      content: '❌ Combat service not available. Please try again later.',
+    });
+    return;
+  }
+
+  const combat = await services.combatManager.getCombat(campaignId);
   if (!combat) {
     await interaction.editReply({
       content: '❌ No combat found in this campaign.',
@@ -439,7 +531,7 @@ async function handleCombatEnd(interaction: any) {
     return;
   }
 
-  const summary = combatManager.endCombat(campaignId);
+  const summary = await services.combatManager.endCombat(campaignId);
   if (!summary) {
     await interaction.editReply({
       content: '❌ Failed to end combat.',

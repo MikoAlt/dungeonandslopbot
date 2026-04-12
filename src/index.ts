@@ -43,6 +43,7 @@ async function main(): Promise<void> {
 
   const interactionHandler = createInteractionHandler(
     commands,
+    container,
     container.rateLimiter,
     container.commandQueue,
     Logger,

@@ -36,6 +36,11 @@ export function setThumbnailSafe(
   if (!url) return embed;
   try {
     embed.setThumbnail(url);
-  } catch (_e) {}
+  } catch (err) {
+    console.warn(
+      '[EmbedBuilder] setThumbnail failed:',
+      err instanceof Error ? err.message : String(err),
+    );
+  }
   return embed;
 }

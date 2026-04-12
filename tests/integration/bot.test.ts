@@ -72,8 +72,11 @@ describe('Bot Integration', () => {
 
       const mockCommands = new Map();
 
+      const mockContainer = {};
+
       const handler = createInteractionHandler(
         mockCommands,
+        mockContainer as any,
         mockRateLimiter,
         mockQueue,
         mockLogger,
@@ -112,8 +115,11 @@ describe('Bot Integration', () => {
 
       const mockCommands = new Map([['ping', { data: { name: 'ping' }, execute: vi.fn() }]]);
 
+      const mockContainer = {};
+
       const handler = createInteractionHandler(
         mockCommands,
+        mockContainer as any,
         mockRateLimiter,
         mockQueue,
         mockLogger,
@@ -159,8 +165,11 @@ describe('Bot Integration', () => {
 
       const mockCommands = new Map([['ping', { data: { name: 'ping' }, execute: mockExecute }]]);
 
+      const mockContainer = {};
+
       const handler = createInteractionHandler(
         mockCommands,
+        mockContainer as any,
         mockRateLimiter,
         mockQueue,
         mockLogger,

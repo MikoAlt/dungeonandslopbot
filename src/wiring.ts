@@ -5,6 +5,7 @@ import { CampaignRepository } from './db/repositories/campaign.js';
 import { StoryRepository } from './db/repositories/story.js';
 import { MessageRepository } from './db/repositories/message.js';
 import { EmbeddingRepository } from './db/repositories/embedding.js';
+import { CombatRepository } from './db/repositories/combat.js';
 import { CharacterService } from './services/character.js';
 import { CampaignService } from './services/campaign.js';
 import { StoryService } from './services/story.js';
@@ -23,6 +24,7 @@ export interface AppContainer {
   characterRepo: CharacterRepository;
   messageRepo: MessageRepository;
   embeddingRepo: EmbeddingRepository;
+  combatRepo: CombatRepository;
   campaignService: CampaignService;
   storyService: StoryService;
   characterService: CharacterService;
@@ -60,6 +62,7 @@ export async function createContainer(): Promise<AppContainer> {
   const characterRepo = new CharacterRepository(prisma);
   const messageRepo = new MessageRepository(prisma);
   const embeddingRepo = new EmbeddingRepository(prisma);
+  const combatRepo = new CombatRepository(prisma);
 
   const campaignState = new CampaignState();
 
@@ -83,7 +86,12 @@ export async function createContainer(): Promise<AppContainer> {
       messages.push(newMessage);
       messageStoreData.store.messages.set(campaignId, messages);
 
-      messageRepo.createMessage(campaignId, null, role, content, 0).catch(() => {});
+      messageRepo.createMessage(campaignId, null, role, content, 0).catch((err) => {
+        console.error(
+          '[MessageStore] Failed to persist message:',
+          err instanceof Error ? err.message : String(err),
+        );
+      });
 
       return newMessage;
     },
@@ -126,6 +134,7 @@ export async function createContainer(): Promise<AppContainer> {
     characterRepo,
     messageRepo,
     embeddingRepo,
+    combatRepo,
     campaignService,
     storyService,
     characterService,

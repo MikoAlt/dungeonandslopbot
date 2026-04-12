@@ -166,6 +166,10 @@ export class CharacterService {
     return this.repo.update(id, { inventory: validatedItems });
   }
 
+  async updateBackstory(id: string, backstory: string): Promise<Character> {
+    return this.repo.update(id, { backstory });
+  }
+
   async modifyHp(id: string, delta: number): Promise<Character> {
     const character = await this.getCharacter(id);
     const newHp = Math.max(0, Math.min(character.maxHp, character.hp + delta));

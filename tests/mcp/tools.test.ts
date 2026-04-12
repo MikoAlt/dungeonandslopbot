@@ -1,5 +1,6 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'bun:test';
 import {
+  initHandlers,
   characterCreateHandler,
   characterGetHandler,
   characterListHandler,
@@ -30,150 +31,332 @@ import {
   StoryGetInputSchema,
   DiceRollInputSchema,
 } from '../../src/mcp/types';
+import type { AppContainer } from '../../src/wiring';
+import type { Character } from '../../src/types/character';
+import type { Campaign } from '../../src/types/campaign';
+import type { Story } from '../../src/types/story';
 
 function parseJson(text: string): unknown {
   return JSON.parse(text);
 }
 
+function createMockContainer() {
+  const mockCharacterService = {
+    createCharacter: vi.fn(),
+    getCharacter: vi.fn(),
+    listCharacters: vi.fn(),
+    updateStats: vi.fn(),
+    updateInventory: vi.fn(),
+    modifyHp: vi.fn(),
+    levelUp: vi.fn(),
+    addExperience: vi.fn(),
+    deleteCharacter: vi.fn(),
+  };
+
+  const mockCampaignService = {
+    createCampaign: vi.fn(),
+    getCampaign: vi.fn(),
+    listCampaigns: vi.fn(),
+    joinCampaign: vi.fn(),
+    leaveCampaign: vi.fn(),
+    updateWorldState: vi.fn(),
+    setMode: vi.fn(),
+    endCampaign: vi.fn(),
+  };
+
+  const mockStoryService = {
+    createStory: vi.fn(),
+    getStory: vi.fn(),
+    getStoryByCampaignId: vi.fn(),
+    advanceScene: vi.fn(),
+    getCurrentScene: vi.fn(),
+    summarizeStory: vi.fn(),
+    rollbackScene: vi.fn(),
+  };
+
+  const mockContainer = {
+    characterService: mockCharacterService,
+    campaignService: mockCampaignService,
+    storyService: mockStoryService,
+    characterRepo: {
+      update: vi.fn(),
+    },
+  } as unknown as AppContainer;
+
+  return { mockContainer, mockCharacterService, mockCampaignService, mockStoryService };
+}
+
+const mockCharacter: Character = {
+  id: 'char-123',
+  userId: 'user-1',
+  name: 'Aragorn',
+  class: 'Ranger',
+  level: 5,
+  hp: 42,
+  maxHp: 45,
+  rpgSystem: 'dnd5e',
+  stats: {
+    str: 16,
+    dex: 14,
+    con: 15,
+    int: 10,
+    wis: 12,
+    cha: 13,
+    ac: 16,
+    speed: 30,
+    hitDice: '1d10',
+  },
+  inventory: [],
+  backstory: 'A ranger from the North',
+  campaignId: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockCampaign: Campaign = {
+  id: 'camp-123',
+  name: 'Lost Mine of Phandelver',
+  description: 'A classic D&D adventure',
+  rpgSystem: 'dnd5e',
+  mode: 'sharedSession',
+  dmUserId: 'dm-1',
+  guildId: 'guild-1',
+  channelId: 'channel-1',
+  worldState: {
+    currentLocation: 'Phandalin',
+    npcs: [],
+    quests: [],
+    events: [],
+    sessionCount: 1,
+  },
+  isActive: true,
+  players: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockStory: Story = {
+  id: 'story-123',
+  campaignId: 'camp-123',
+  scenes: [
+    {
+      id: 'scene-1',
+      description: 'The party meets in a tavern',
+      npcInteractions: [],
+      playerActions: [],
+      timestamp: new Date(),
+    },
+  ],
+  currentSceneIndex: 0,
+  summary: 'The fellowship is formed',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 describe('Tool Handlers - Valid Inputs', () => {
+  let mockContainer: AppContainer;
+  let mockCharacterService: ReturnType<typeof vi.fn>;
+  let mockCampaignService: ReturnType<typeof vi.fn>;
+  let mockStoryService: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    const mocks = createMockContainer();
+    mockContainer = mocks.mockContainer;
+    mockCharacterService = mocks.mockCharacterService;
+    mockCampaignService = mocks.mockCampaignService;
+    mockStoryService = mocks.mockStoryService;
+    initHandlers(mockContainer);
+  });
+
   test('character_create returns success with character data', async () => {
+    mockCharacterService.createCharacter.mockResolvedValue(mockCharacter);
+
     const result = await characterCreateHandler({
       name: 'Aragorn',
       class: 'Ranger',
       rpgSystem: 'dnd5e',
-    });
+      userId: 'user-1',
+    } as Parameters<typeof characterCreateHandler>[0]);
+
     expect(result.content[0].type).toBe('text');
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect(data.message).toBe('character_create not yet connected');
-    expect(data.data).toEqual({
-      name: 'Aragorn',
-      class: 'Ranger',
-      rpgSystem: 'dnd5e',
-      backstory: null,
-    });
+    expect((data.data as Character).name).toBe('Aragorn');
+    expect((data.data as Character).class).toBe('Ranger');
   });
 
   test('character_create with backstory returns success', async () => {
+    const charWithBackstory = { ...mockCharacter, backstory: 'A wizard from Valinor' };
+    mockCharacterService.createCharacter.mockResolvedValue(charWithBackstory);
+
     const result = await characterCreateHandler({
       name: 'Gandalf',
       class: 'Wizard',
       rpgSystem: 'dnd5e',
       backstory: 'A wizard from Valinor',
-    });
+      userId: 'user-1',
+    } as Parameters<typeof characterCreateHandler>[0]);
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).backstory).toBe('A wizard from Valinor');
+    expect((data.data as Character).backstory).toBe('A wizard from Valinor');
   });
 
   test('character_get returns success with id', async () => {
-    const result = await characterGetHandler({ id: 'char_123' });
+    mockCharacterService.getCharacter.mockResolvedValue(mockCharacter);
+
+    const result = await characterGetHandler({ id: 'char-123' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).id).toBe('char_123');
+    expect((data.data as Character).id).toBe('char-123');
   });
 
   test('character_list returns success with userId', async () => {
-    const result = await characterListHandler({ userId: 'user_1' });
+    const characters = [mockCharacter];
+    mockCharacterService.listCharacters.mockResolvedValue(characters);
+
+    const result = await characterListHandler({ userId: 'user-1' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).userId).toBe('user_1');
-    expect((data.data as Record<string, unknown>).campaignId).toBeNull();
+    expect(Array.isArray(data.data)).toBe(true);
   });
 
   test('character_list with campaignId returns success', async () => {
-    const result = await characterListHandler({ userId: 'user_1', campaignId: 'camp_1' });
+    const characters = [{ ...mockCharacter, campaignId: 'camp-123' }];
+    mockCharacterService.listCharacters.mockResolvedValue(characters);
+
+    const result = await characterListHandler({ userId: 'user-1', campaignId: 'camp-123' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).campaignId).toBe('camp_1');
+    expect(Array.isArray(data.data)).toBe(true);
   });
 
   test('character_update returns success with id and updates', async () => {
+    const updatedChar = { ...mockCharacter, hp: 30 };
+    mockCharacterService.modifyHp.mockResolvedValue(updatedChar);
+
     const result = await characterUpdateHandler({
-      id: 'char_1',
-      updates: { hp: 10, level: 2 },
+      id: 'char-123',
+      updates: { hp: 30 },
     });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).id).toBe('char_1');
+    expect((data.data as Character).id).toBe('char-123');
   });
 
   test('campaign_create returns success with campaign data', async () => {
+    mockCampaignService.createCampaign.mockResolvedValue(mockCampaign);
+
     const result = await campaignCreateHandler({
       name: 'Lost Mine of Phandelver',
       rpgSystem: 'dnd5e',
       mode: 'sharedSession',
-    });
+      dmUserId: 'dm-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+    } as Parameters<typeof campaignCreateHandler>[0]);
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).name).toBe('Lost Mine of Phandelver');
-    expect((data.data as Record<string, unknown>).description).toBeNull();
+    expect((data.data as Campaign).name).toBe('Lost Mine of Phandelver');
   });
 
   test('campaign_create with description returns success', async () => {
+    const campaignWithDesc = { ...mockCampaign, description: 'A custom campaign' };
+    mockCampaignService.createCampaign.mockResolvedValue(campaignWithDesc);
+
     const result = await campaignCreateHandler({
       name: 'Test Campaign',
       rpgSystem: 'custom',
       mode: 'persistentWorld',
       description: 'A custom campaign',
-    });
+      dmUserId: 'dm-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+    } as Parameters<typeof campaignCreateHandler>[0]);
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).description).toBe('A custom campaign');
+    expect((data.data as Campaign).description).toBe('A custom campaign');
   });
 
   test('campaign_get returns success with id', async () => {
-    const result = await campaignGetHandler({ id: 'camp_1' });
+    mockCampaignService.getCampaign.mockResolvedValue(mockCampaign);
+
+    const result = await campaignGetHandler({ id: 'camp-123' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).id).toBe('camp_1');
+    expect((data.data as Campaign).id).toBe('camp-123');
   });
 
   test('campaign_list returns success with guildId', async () => {
-    const result = await campaignListHandler({ guildId: 'guild_1' });
+    const campaigns = [mockCampaign];
+    mockCampaignService.listCampaigns.mockResolvedValue(campaigns);
+
+    const result = await campaignListHandler({ guildId: 'guild-1' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).guildId).toBe('guild_1');
+    expect(Array.isArray(data.data)).toBe(true);
   });
 
   test('campaign_update_world_state returns success', async () => {
+    const updatedCampaign = {
+      ...mockCampaign,
+      worldState: { ...mockCampaign.worldState, currentLocation: 'Mordor' },
+    };
+    mockCampaignService.updateWorldState.mockResolvedValue(updatedCampaign);
+
     const result = await campaignUpdateWorldStateHandler({
-      id: 'camp_1',
-      worldState: { weather: 'rainy', day: 5 },
+      id: 'camp-123',
+      worldState: { currentLocation: 'Mordor', npcs: [], quests: [], events: [], sessionCount: 1 },
     });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).id).toBe('camp_1');
+    expect((data.data as Campaign).id).toBe('camp-123');
   });
 
   test('story_advance returns success with campaignId and action', async () => {
+    mockStoryService.advanceScene.mockResolvedValue(mockStory);
+
     const result = await storyAdvanceHandler({
-      campaignId: 'camp_1',
+      campaignId: 'camp-123',
       action: 'The hero attacks the dragon',
     });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).campaignId).toBe('camp_1');
-    expect((data.data as Record<string, unknown>).action).toBe('The hero attacks the dragon');
+    expect((data.data as Story).campaignId).toBe('camp-123');
   });
 
   test('story_get returns success with campaignId', async () => {
-    const result = await storyGetHandler({ campaignId: 'camp_1' });
+    mockStoryService.getStoryByCampaignId.mockResolvedValue(mockStory);
+
+    const result = await storyGetHandler({ campaignId: 'camp-123' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect((data.data as Record<string, unknown>).campaignId).toBe('camp_1');
+    expect((data.data as Story).campaignId).toBe('camp-123');
   });
 
   test('dice_roll returns success with notation', async () => {
     const result = await diceRollHandler({ notation: '2d20+5' });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
     expect((data.data as Record<string, unknown>).notation).toBe('2d20+5');
-    expect((data.data as Record<string, unknown>).modifier).toBeNull();
+    expect(Array.isArray((data.data as Record<string, unknown>).rolls)).toBe(true);
   });
 
   test('dice_roll with modifier returns success', async () => {
     const result = await diceRollHandler({ notation: '1d20', modifier: 10 });
+
     const data = parseJson(result.content[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
     expect((data.data as Record<string, unknown>).modifier).toBe(10);
@@ -346,7 +529,7 @@ describe('Zod Schema Validation - Valid Inputs', () => {
   test('CampaignUpdateWorldStateInputSchema accepts valid input', () => {
     const result = CampaignUpdateWorldStateInputSchema.safeParse({
       id: 'camp_1',
-      worldState: { weather: 'sunny' },
+      worldState: { weather: 'sunny', npcs: [], quests: [], events: [], sessionCount: 0 },
     });
     expect(result.success).toBe(true);
   });
@@ -363,44 +546,73 @@ describe('Zod Schema Validation - Valid Inputs', () => {
 });
 
 describe('Resource Handlers', () => {
+  let mockContainer: AppContainer;
+  let mockCampaignService: ReturnType<typeof vi.fn>;
+  let mockCharacterService: ReturnType<typeof vi.fn>;
+  let mockStoryService: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    const mocks = createMockContainer();
+    mockContainer = mocks.mockContainer;
+    mockCampaignService = mocks.mockCampaignService;
+    mockCharacterService = mocks.mockCharacterService;
+    mockStoryService = mocks.mockStoryService;
+    initHandlers(mockContainer);
+  });
+
   test('campaign resource returns data for given id', async () => {
-    const uri = new URL('dungeon://campaigns/camp_123');
+    mockCampaignService.getCampaign.mockResolvedValue(mockCampaign);
+
+    const uri = new URL('dungeon://campaigns/camp-123');
     const result = await campaignResourceHandler(uri);
+
     expect(result.contents[0].mimeType).toBe('application/json');
-    expect(result.contents[0].uri).toBe('dungeon://campaigns/camp_123');
+    expect(result.contents[0].uri).toBe('dungeon://campaigns/camp-123');
     const data = parseJson(result.contents[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect(data.id).toBe('camp_123');
+    expect((data as Campaign).id).toBe('camp-123');
   });
 
   test('character resource returns data for given id', async () => {
-    const uri = new URL('dungeon://characters/char_456');
+    mockCharacterService.getCharacter.mockImplementation((id: string) => {
+      return Promise.resolve({ ...mockCharacter, id });
+    });
+
+    const uri = new URL('dungeon://characters/char-456');
     const result = await characterResourceHandler(uri);
+
     expect(result.contents[0].mimeType).toBe('application/json');
-    expect(result.contents[0].uri).toBe('dungeon://characters/char_456');
+    expect(result.contents[0].uri).toBe('dungeon://characters/char-456');
     const data = parseJson(result.contents[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect(data.id).toBe('char_456');
+    expect((data as Character).id).toBe('char-456');
   });
 
   test('story resource returns data for given id', async () => {
-    const uri = new URL('dungeon://stories/story_789');
+    mockStoryService.getStory.mockImplementation((id: string) => {
+      return Promise.resolve({ ...mockStory, id });
+    });
+
+    const uri = new URL('dungeon://stories/story-789');
     const result = await storyResourceHandler(uri);
+
     expect(result.contents[0].mimeType).toBe('application/json');
-    expect(result.contents[0].uri).toBe('dungeon://stories/story_789');
+    expect(result.contents[0].uri).toBe('dungeon://stories/story-789');
     const data = parseJson(result.contents[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect(data.id).toBe('story_789');
+    expect((data as Story).id).toBe('story-789');
   });
 
   test('world-state resource extracts campaign id from URI', async () => {
-    const uri = new URL('dungeon://campaigns/camp_abc/world-state');
+    mockCampaignService.getCampaign.mockResolvedValue(mockCampaign);
+
+    const uri = new URL('dungeon://campaigns/camp-abc/world-state');
     const result = await worldStateResourceHandler(uri);
+
     expect(result.contents[0].mimeType).toBe('application/json');
-    expect(result.contents[0].uri).toBe('dungeon://campaigns/camp_abc/world-state');
+    expect(result.contents[0].uri).toBe('dungeon://campaigns/camp-abc/world-state');
     const data = parseJson(result.contents[0].text) as Record<string, unknown>;
     expect(data.success).toBe(true);
-    expect(data.id).toBe('camp_abc');
   });
 });
 

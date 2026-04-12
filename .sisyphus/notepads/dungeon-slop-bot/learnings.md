@@ -105,17 +105,46 @@
 
 ## T11 Patterns (MCP Tools & Resources)
 
+### Handler Initialization Pattern
+
+- MCP handlers need services from AppContainer, but handlers are imported at module level
+- Solution: global `_container` variable + `initHandlers(container)` function called at startup
+- `getContainer()` helper throws if handlers not initialized (fails fast in tests)
+- `startMcpServer(container)` calls `initHandlers(container)` before connecting
+
+### MCP Input Schema Gaps
+
+- `CharacterCreateInput` missing `userId` (required by CharacterService.createCharacter)
+- `CampaignCreateInput` missing `dmUserId`, `guildId`, `channelId` (required by CampaignService.createCampaign)
+- Workaround: handlers accept extended input via cast (`input as unknown as { userId?: string }`)
+- Tests pass extended input directly; real usage needs MCP client to provide these
+
+### Resource Handler Response Format
+
+- MCP resources return raw data, not wrapped in `{ success: true, data: ... }` like tools
+- Response format: `{ success: true, id: obj.id, ...obj }` for campaigns/characters/stories
+- WorldState: `{ success: true, id: campaign.id, ...campaign.worldState }`
+- Error format: `{ success: false, error: message }` for both tools and resources
+
+### Dice Roll Handler
+
+- `rollFromNotation(notation)` parses notation (e.g., "2d6+3") and returns `{ rolls, total, modifier, notation }`
+- If input has separate `modifier` field, add it to the total: `total + input.modifier`
+- Return format: `{ success: true, notation, rolls, modifier, total }`
+
+### Character Update Handler
+
+- No single `update()` method; service has `updateStats()`, `updateInventory()`, `modifyHp()`
+- Dispatch based on which fields are in `updates` object
+- Generic fields (name, class, etc.) use `characterRepo.update()` directly
+
+### URL Parsing for Resources
+
 - Custom protocol URLs (dungeon://) parse with hostname as the first segment and pathname starting with /
   - e.g., dungeon://campaigns/camp_123 → hostname: "campaigns", pathname: "/camp_123"
-  - Extract ID from pathname with .replace(/^\//, '') to strip leading slash
+  - Extract ID from pathname with `uri.pathname.replace(/^\//, '')` to strip leading slash
   - For nested paths like dungeon://campaigns/camp_abc/world-state → pathname: "/camp_abc/world-state"
-- Separate handlers.ts from tools.ts/resources.ts for testability — handlers are pure functions, easy to unit test
-- registerTools() and registerResources() as separate functions called from createMcpServer() keeps server.ts clean
-- Placeholder handlers return { content: [{ type: "text", text: JSON.stringify({...}) }] } pattern for deferred service wiring
-- Resource handlers receive URL object — parse ID from pathname, not from hostname
-- Export errorResponse helper for testing validation error flows
-- z.record(z.unknown()) for flexible update payloads (character updates, world state)
-- All 11 tools + 4 resources registered, 72 tests passing
+- Use `getLastPathSegment()` helper: `uri.pathname.split('/').filter(Boolean).pop()`
 
 ## T9 Patterns (RPG System Engine)
 
