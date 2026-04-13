@@ -4,32 +4,6 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 const mockGetCampaign = vi.fn();
 const mockFindActiveByChannelId = vi.fn();
 
-vi.mock('../../../src/db/prisma', () => ({
-  prisma: {},
-}));
-
-vi.mock('../../../src/services/campaign', () => ({
-  CampaignService: vi.fn().mockImplementation(() => ({
-    createCampaign: vi.fn(),
-    getCampaign: mockGetCampaign,
-    joinCampaign: vi.fn(),
-    leaveCampaign: vi.fn(),
-    endCampaign: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../src/db/repositories/campaign', () => ({
-  CampaignRepository: vi.fn().mockImplementation(() => ({
-    findActiveByChannelId: mockFindActiveByChannelId,
-    findById: vi.fn(),
-    create: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../src/services/campaign/state', () => ({
-  CampaignState: vi.fn().mockImplementation(() => ({})),
-}));
-
 vi.mock('../../../src/embeds/renderers/campaign', () => ({
   renderCampaignStatus: vi.fn().mockReturnValue([{ data: { title: 'Test Campaign' } }]),
   renderWorldState: vi.fn().mockReturnValue([{ data: { title: 'World State' } }]),
@@ -40,6 +14,7 @@ import campaignStatusCommand from '../../../src/commands/campaign/status';
 
 describe('campaign status command', () => {
   let mockInteraction: Partial<ChatInputCommandInteraction>;
+  let mockServices: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,6 +41,15 @@ describe('campaign status command', () => {
       updatedAt: new Date(),
     });
 
+    mockServices = {
+      campaignService: {
+        getCampaign: mockGetCampaign,
+      },
+      campaignRepo: {
+        findActiveByChannelId: mockFindActiveByChannelId,
+      },
+    };
+
     mockInteraction = {
       deferReply: vi.fn().mockResolvedValue(undefined),
       editReply: vi.fn().mockResolvedValue(undefined),
@@ -84,7 +68,7 @@ describe('campaign status command', () => {
     });
 
     const command = campaignStatusCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.deferReply).toHaveBeenCalledWith();
   });
@@ -96,7 +80,7 @@ describe('campaign status command', () => {
     });
 
     const command = campaignStatusCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockFindActiveByChannelId).toHaveBeenCalledWith('channel-123');
   });
@@ -108,7 +92,7 @@ describe('campaign status command', () => {
     });
 
     const command = campaignStatusCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockGetCampaign).toHaveBeenCalledWith('specific-campaign-id');
     expect(mockFindActiveByChannelId).not.toHaveBeenCalled();
@@ -121,7 +105,7 @@ describe('campaign status command', () => {
     });
 
     const command = campaignStatusCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -134,7 +118,7 @@ describe('campaign status command', () => {
     mockFindActiveByChannelId.mockResolvedValue(null);
 
     const command = campaignStatusCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({

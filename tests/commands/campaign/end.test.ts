@@ -1,39 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import type { ChatInputCommandInteraction } from 'discord.js';
+import { ValidationError } from '../../../src/errors.js';
 
 const mockGetCampaign = vi.fn();
 const mockEndCampaign = vi.fn();
-
-vi.mock('../../../src/db/prisma', () => ({
-  prisma: {},
-}));
-
-vi.mock('../../../src/services/campaign', () => ({
-  CampaignService: vi.fn().mockImplementation(() => ({
-    createCampaign: vi.fn(),
-    getCampaign: mockGetCampaign,
-    joinCampaign: vi.fn(),
-    leaveCampaign: vi.fn(),
-    endCampaign: mockEndCampaign,
-  })),
-}));
-
-vi.mock('../../../src/db/repositories/campaign', () => ({
-  CampaignRepository: vi.fn().mockImplementation(() => ({
-    findActiveByChannelId: vi.fn(),
-    findById: vi.fn(),
-    create: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../src/services/campaign/state', () => ({
-  CampaignState: vi.fn().mockImplementation(() => ({})),
-}));
 
 import campaignEndCommand from '../../../src/commands/campaign/end';
 
 describe('campaign end command', () => {
   let mockInteraction: Partial<ChatInputCommandInteraction>;
+  let mockServices: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,6 +25,13 @@ describe('campaign end command', () => {
       name: 'Test Campaign',
       isActive: false,
     });
+
+    mockServices = {
+      campaignService: {
+        getCampaign: mockGetCampaign,
+        endCampaign: mockEndCampaign,
+      },
+    };
 
     mockInteraction = {
       deferReply: vi.fn().mockResolvedValue(undefined),
@@ -70,21 +53,21 @@ describe('campaign end command', () => {
 
   it('defers reply with public response', async () => {
     const command = campaignEndCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.deferReply).toHaveBeenCalledWith();
   });
 
   it('ends campaign when confirm is true and user is DM', async () => {
     const command = campaignEndCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
-    expect(mockEndCampaign).toHaveBeenCalledWith('campaign-123');
+    expect(mockEndCampaign).toHaveBeenCalledWith('campaign-123', 'dm-123');
   });
 
   it('edits reply with success message', async () => {
     const command = campaignEndCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith({
       content: 'Campaign "Test Campaign" has been ended.',
@@ -93,14 +76,17 @@ describe('campaign end command', () => {
 
   it('rejects ending campaign when user is not DM', async () => {
     mockInteraction.user = { id: 'not-dm' } as any;
+    mockEndCampaign.mockRejectedValue(
+      new ValidationError([{ message: 'Only the DM can end this campaign' }]),
+    );
 
     const command = campaignEndCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith({
-      content: 'Only the DM can end this campaign.',
+      content: 'Only the DM can end this campaign',
     });
-    expect(mockEndCampaign).not.toHaveBeenCalled();
+    expect(mockEndCampaign).toHaveBeenCalledWith('campaign-123', 'not-dm');
   });
 
   it('prompts confirmation when confirm is false', async () => {
@@ -110,7 +96,7 @@ describe('campaign end command', () => {
     });
 
     const command = campaignEndCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({

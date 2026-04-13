@@ -110,6 +110,14 @@ export class CampaignService {
 
   async joinCampaign(campaignId: string, userId: string): Promise<Campaign> {
     const campaign = await this.getCampaign(campaignId);
+    if (!campaign.isActive) {
+      throw new ValidationError([
+        {
+          message: `Campaign ${campaignId} is not active and cannot be joined`,
+          path: 'campaignId',
+        },
+      ]);
+    }
     if (campaign.players.includes(userId)) {
       throw new ValidationError([
         { message: `User ${userId} is already in campaign ${campaignId}`, path: 'userId' },
@@ -123,6 +131,11 @@ export class CampaignService {
 
   async leaveCampaign(campaignId: string, userId: string): Promise<Campaign> {
     const campaign = await this.getCampaign(campaignId);
+    if (!campaign.isActive) {
+      throw new ValidationError([
+        { message: `Campaign ${campaignId} has ended and cannot be modified`, path: 'campaignId' },
+      ]);
+    }
     if (!campaign.players.includes(userId)) {
       throw new ValidationError([
         { message: `User ${userId} is not in campaign ${campaignId}`, path: 'userId' },
@@ -169,8 +182,13 @@ export class CampaignService {
     return updated;
   }
 
-  async endCampaign(campaignId: string): Promise<Campaign> {
-    await this.getCampaign(campaignId);
+  async endCampaign(campaignId: string, requestingUserId: string): Promise<Campaign> {
+    const campaign = await this.getCampaign(campaignId);
+    if (campaign.dmUserId !== requestingUserId) {
+      throw new ValidationError([
+        { message: 'Only the DM can end this campaign', path: 'dmUserId' },
+      ]);
+    }
 
     const updated = await this.repo.setActive(campaignId, false);
     this.state.invalidateState(campaignId);

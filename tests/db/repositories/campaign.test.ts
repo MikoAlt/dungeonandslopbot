@@ -118,16 +118,16 @@ describe('CampaignRepository', () => {
     expect(result).toEqual(updated);
     expect(prisma.campaign.update).toHaveBeenCalledWith({
       where: { id: 'camp1' },
-      data: { players: ['user2'] },
+      data: { players: { push: 'user2' } },
     });
   });
 
   test('addPlayer throws when campaign not found', async () => {
-    (prisma.campaign.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-
-    expect(repo.addPlayer('nonexistent', 'user2')).rejects.toThrow(
-      'Campaign with id nonexistent not found',
+    (prisma.campaign.update as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Record not found'),
     );
+
+    expect(repo.addPlayer('nonexistent', 'user2')).rejects.toThrow();
   });
 
   test('removePlayer removes a player from campaign', async () => {
@@ -149,7 +149,7 @@ describe('CampaignRepository', () => {
     (prisma.campaign.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     expect(repo.removePlayer('nonexistent', 'user2')).rejects.toThrow(
-      'Campaign with id nonexistent not found',
+      "Campaign with id 'nonexistent' not found",
     );
   });
 });

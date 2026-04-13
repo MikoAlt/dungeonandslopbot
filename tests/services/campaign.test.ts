@@ -370,7 +370,7 @@ describe('CampaignService', () => {
       const campaign = createMockCampaign({ id: 'camp-end' });
       await repo.create(campaign);
 
-      const updated = await service.endCampaign('camp-end');
+      const updated = await service.endCampaign('camp-end', 'dm-1');
       expect(updated.isActive).toBe(false);
     });
 
@@ -379,12 +379,12 @@ describe('CampaignService', () => {
       await repo.create(campaign);
       await state.loadState(campaign);
 
-      await service.endCampaign('camp-end2');
+      await service.endCampaign('camp-end2', 'dm-1');
       expect(state.getCached('camp-end2')).toBeUndefined();
     });
 
     it('throws NotFoundError for non-existent campaign', async () => {
-      await expect(service.endCampaign('nonexistent')).rejects.toThrow(NotFoundError);
+      await expect(service.endCampaign('nonexistent', 'any-user')).rejects.toThrow(NotFoundError);
     });
   });
 });

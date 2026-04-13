@@ -1,5 +1,6 @@
 import { PrismaClient } from '../../generated/prisma/client.js';
 import { BaseRepository } from './base.js';
+import { NotFoundError } from '../../errors.js';
 
 type CampaignModel = {
   id: string;
@@ -56,18 +57,16 @@ export class CampaignRepository extends BaseRepository<CampaignModel> {
   }
 
   async addPlayer(id: string, userId: string): Promise<CampaignModel> {
-    const campaign = await this.findById(id);
-    if (!campaign) {
-      throw new Error(`Campaign with id ${id} not found`);
-    }
-    const players = [...(campaign.players as string[]), userId];
-    return this.prisma.campaign.update({ where: { id }, data: { players } });
+    return this.prisma.campaign.update({
+      where: { id },
+      data: { players: { push: userId } },
+    });
   }
 
   async removePlayer(id: string, userId: string): Promise<CampaignModel> {
     const campaign = await this.findById(id);
     if (!campaign) {
-      throw new Error(`Campaign with id ${id} not found`);
+      throw new NotFoundError('Campaign', id);
     }
     const players = (campaign.players as string[]).filter((p) => p !== userId);
     return this.prisma.campaign.update({ where: { id }, data: { players } });

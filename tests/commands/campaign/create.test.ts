@@ -2,34 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import type { ChatInputCommandInteraction } from 'discord.js';
 
 const mockCreateCampaign = vi.fn();
-const mockFindActiveByChannelId = vi.fn();
-const mockFindById = vi.fn();
-
-vi.mock('../../../src/db/prisma', () => ({
-  prisma: {},
-}));
-
-vi.mock('../../../src/services/campaign', () => ({
-  CampaignService: vi.fn().mockImplementation(() => ({
-    createCampaign: mockCreateCampaign,
-    getCampaign: vi.fn(),
-    joinCampaign: vi.fn(),
-    leaveCampaign: vi.fn(),
-    endCampaign: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../src/db/repositories/campaign', () => ({
-  CampaignRepository: vi.fn().mockImplementation(() => ({
-    findActiveByChannelId: mockFindActiveByChannelId,
-    findById: mockFindById,
-    create: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../src/services/campaign/state', () => ({
-  CampaignState: vi.fn().mockImplementation(() => ({})),
-}));
 
 vi.mock('../../../src/embeds/renderers/campaign', () => ({
   renderCampaignStatus: vi.fn().mockReturnValue([{ data: { title: 'Test Campaign' } }]),
@@ -39,6 +11,7 @@ import campaignCreateCommand from '../../../src/commands/campaign/create';
 
 describe('campaign create command', () => {
   let mockInteraction: Partial<ChatInputCommandInteraction>;
+  let mockServices: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,6 +38,12 @@ describe('campaign create command', () => {
       updatedAt: new Date(),
     });
 
+    mockServices = {
+      campaignService: {
+        createCampaign: mockCreateCampaign,
+      },
+    };
+
     mockInteraction = {
       deferReply: vi.fn().mockResolvedValue(undefined),
       editReply: vi.fn().mockResolvedValue(undefined),
@@ -88,14 +67,14 @@ describe('campaign create command', () => {
 
   it('defers reply with public response', async () => {
     const command = campaignCreateCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.deferReply).toHaveBeenCalledWith();
   });
 
   it('creates campaign with correct data', async () => {
     const command = campaignCreateCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockCreateCampaign).toHaveBeenCalledWith({
       name: 'Test Campaign',
@@ -110,7 +89,7 @@ describe('campaign create command', () => {
 
   it('edits reply with campaign status embeds', async () => {
     const command = campaignCreateCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -131,7 +110,7 @@ describe('campaign create command', () => {
     });
 
     const command = campaignCreateCommand;
-    await command.execute(mockInteraction as ChatInputCommandInteraction);
+    await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
     expect(mockCreateCampaign).toHaveBeenCalledWith(
       expect.objectContaining({

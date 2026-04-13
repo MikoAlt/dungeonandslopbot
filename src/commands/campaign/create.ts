@@ -1,10 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types/command.js';
-import { CampaignService } from '../../services/campaign.js';
-import { CampaignRepository } from '../../db/repositories/campaign.js';
-import { CampaignState } from '../../services/campaign/state.js';
+import type { AppContainer } from '../../wiring.js';
 import { renderCampaignStatus } from '../../embeds/renderers/campaign.js';
-import { prisma } from '../../db/prisma.js';
+import { NotFoundError, ValidationError } from '../../errors.js';
+import { Logger } from '../../utils/logger.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -43,8 +42,15 @@ export default {
         ),
     ),
 
-  async execute(interaction) {
+  async execute(interaction, services?: AppContainer) {
     await interaction.deferReply();
+
+    if (!services?.campaignService) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
 
     const subcommand = interaction.options.getSubcommand();
     if (subcommand !== 'create') {
@@ -64,21 +70,32 @@ export default {
     const guildId = interaction.guildId ?? '';
     const channelId = interaction.channelId;
 
-    const repo = new CampaignRepository(prisma);
-    const state = new CampaignState();
-    const campaignService = new CampaignService(repo, state);
+    const campaignService = services.campaignService;
 
-    const campaign = await campaignService.createCampaign({
-      name,
-      description,
-      rpgSystem: system,
-      mode,
-      dmUserId: userId,
-      guildId,
-      channelId,
-    });
+    try {
+      const campaign = await campaignService.createCampaign({
+        name,
+        description,
+        rpgSystem: system,
+        mode,
+        dmUserId: userId,
+        guildId,
+        channelId,
+      });
 
-    const embeds = renderCampaignStatus(campaign);
-    await interaction.editReply({ embeds });
+      const embeds = renderCampaignStatus(campaign);
+      await interaction.editReply({ embeds });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        await interaction.editReply({ content: `Not found: ${error.message}` });
+      } else if (error instanceof ValidationError) {
+        await interaction.editReply({ content: error.message });
+      } else {
+        Logger.error('CampaignCommand', `Unexpected error in ${subcommand}`, error);
+        await interaction.editReply({
+          content: 'An unexpected error occurred. Please try again later.',
+        });
+      }
+    }
   },
 } satisfies Command;

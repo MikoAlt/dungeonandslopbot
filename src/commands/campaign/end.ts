@@ -1,9 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types/command.js';
-import { CampaignService } from '../../services/campaign.js';
-import { CampaignRepository } from '../../db/repositories/campaign.js';
-import { CampaignState } from '../../services/campaign/state.js';
-import { prisma } from '../../db/prisma.js';
+import type { AppContainer } from '../../wiring.js';
+import { NotFoundError, ValidationError } from '../../errors.js';
+import { Logger } from '../../utils/logger.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,8 +20,15 @@ export default {
         ),
     ),
 
-  async execute(interaction) {
+  async execute(interaction, services?: AppContainer) {
     await interaction.deferReply();
+
+    if (!services?.campaignService) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
 
     const subcommand = interaction.options.getSubcommand();
     if (subcommand !== 'end') {
@@ -34,30 +40,34 @@ export default {
     const confirm = interaction.options.getBoolean('confirm', true);
     const userId = interaction.user.id;
 
-    const repo = new CampaignRepository(prisma);
-    const state = new CampaignState();
-    const campaignService = new CampaignService(repo, state);
+    const campaignService = services.campaignService;
 
-    const campaign = await campaignService.getCampaign(campaignId);
+    try {
+      const campaign = await campaignService.getCampaign(campaignId);
 
-    if (campaign.dmUserId !== userId) {
+      if (!confirm) {
+        await interaction.editReply({
+          content: `Are you sure you want to end "${campaign.name}"? This action cannot be undone. Set the confirm option to true to confirm.`,
+        });
+        return;
+      }
+
+      await campaignService.endCampaign(campaignId, userId);
+
       await interaction.editReply({
-        content: 'Only the DM can end this campaign.',
+        content: `Campaign "${campaign.name}" has been ended.`,
       });
-      return;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        await interaction.editReply({ content: `Not found: ${error.message}` });
+      } else if (error instanceof ValidationError) {
+        await interaction.editReply({ content: error.message });
+      } else {
+        Logger.error('CampaignCommand', `Unexpected error in ${subcommand}`, error);
+        await interaction.editReply({
+          content: 'An unexpected error occurred. Please try again later.',
+        });
+      }
     }
-
-    if (!confirm) {
-      await interaction.editReply({
-        content: `Are you sure you want to end "${campaign.name}"? This action cannot be undone. Provide --confirm true to confirm.`,
-      });
-      return;
-    }
-
-    await campaignService.endCampaign(campaignId);
-
-    await interaction.editReply({
-      content: `Campaign "${campaign.name}" has been ended.`,
-    });
   },
 } satisfies Command;

@@ -1,10 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types/command.js';
-import { StoryService } from '../../services/story.js';
-import { StoryRepository } from '../../db/repositories/story.js';
-import { CampaignRepository } from '../../db/repositories/campaign.js';
+import type { AppContainer } from '../../wiring.js';
 import { renderStorySummary } from '../../embeds/renderers/story.js';
-import { prisma } from '../../db/prisma.js';
 
 const storySummaryCommand: Command = {
   data: new SlashCommandBuilder()
@@ -17,12 +14,17 @@ const storySummaryCommand: Command = {
         .setRequired(false),
     ),
 
-  async execute(interaction) {
+  async execute(interaction, services?: AppContainer) {
     await interaction.deferReply();
 
-    const campaignRepo = new CampaignRepository(prisma);
-    const storyRepo = new StoryRepository(prisma);
-    const storyService = new StoryService(storyRepo);
+    if (!services?.campaignRepo || !services?.storyService) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
+
+    const { campaignRepo, storyService } = services;
 
     const campaignIdInput = interaction.options.getString('campaign-id');
 

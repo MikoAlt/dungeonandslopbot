@@ -1,9 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types/command.js';
-import { CampaignService } from '../../services/campaign.js';
-import { CampaignRepository } from '../../db/repositories/campaign.js';
-import { CampaignState } from '../../services/campaign/state.js';
-import { prisma } from '../../db/prisma.js';
+import type { AppContainer } from '../../wiring.js';
+import { NotFoundError, ValidationError } from '../../errors.js';
+import { Logger } from '../../utils/logger.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -18,8 +17,15 @@ export default {
         ),
     ),
 
-  async execute(interaction) {
+  async execute(interaction, services?: AppContainer) {
     await interaction.deferReply({ ephemeral: true });
+
+    if (!services?.campaignService) {
+      await interaction.editReply({
+        content: 'Services not available. Please try again later.',
+      });
+      return;
+    }
 
     const subcommand = interaction.options.getSubcommand();
     if (subcommand !== 'leave') {
@@ -30,14 +36,25 @@ export default {
     const campaignId = interaction.options.getString('campaign-id', true);
     const userId = interaction.user.id;
 
-    const repo = new CampaignRepository(prisma);
-    const state = new CampaignState();
-    const campaignService = new CampaignService(repo, state);
+    const campaignService = services.campaignService;
 
-    const campaign = await campaignService.leaveCampaign(campaignId, userId);
+    try {
+      const campaign = await campaignService.leaveCampaign(campaignId, userId);
 
-    await interaction.editReply({
-      content: `You have left "${campaign.name}".`,
-    });
+      await interaction.editReply({
+        content: `You have left "${campaign.name}".`,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        await interaction.editReply({ content: `Not found: ${error.message}` });
+      } else if (error instanceof ValidationError) {
+        await interaction.editReply({ content: error.message });
+      } else {
+        Logger.error('CampaignCommand', `Unexpected error in ${subcommand}`, error);
+        await interaction.editReply({
+          content: 'An unexpected error occurred. Please try again later.',
+        });
+      }
+    }
   },
 } satisfies Command;
