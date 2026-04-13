@@ -18,12 +18,12 @@ export default {
     .setName('explore')
     .setDescription('Explore the world and interact with the story')
     .addStringOption((option) =>
+      option.setName('action').setDescription('What you want to do').setRequired(true),
+    )
+    .addStringOption((option) =>
       option
         .setName('campaign-id')
         .setDescription('Campaign ID (leave empty to use your active campaign)'),
-    )
-    .addStringOption((option) =>
-      option.setName('action').setDescription('What you want to do').setRequired(true),
     ),
 
   async execute(interaction, services?: ExploreCommandServices) {
