@@ -10,13 +10,13 @@ const storyAdvanceCommand: Command = {
     .setName('story-advance')
     .setDescription('Advance the story with a player action')
     .addStringOption((option) =>
+      option.setName('action').setDescription('The action the player takes').setRequired(true),
+    )
+    .addStringOption((option) =>
       option
         .setName('campaign-id')
         .setDescription('Campaign ID (optional - uses channel campaign if omitted)')
         .setRequired(false),
-    )
-    .addStringOption((option) =>
-      option.setName('action').setDescription('The action the player takes').setRequired(true),
     ),
 
   async execute(interaction, services?: AppContainer) {
