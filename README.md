@@ -1,4 +1,4 @@
-# Dungeon & Slop Bot
+# Dungeon & Slop Bot (not finished still broken)
 
 A Discord RPG dungeon crawler bot with LLM-powered narrative, dual RPG systems, multiplayer support, and MCP-based story management.
 
