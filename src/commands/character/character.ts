@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '../../types/command.js';
 import { renderCharacterSheet, renderCharacterMini } from '../../embeds/renderers/character.js';
 import type { AppContainer } from '../../wiring.js';
@@ -102,7 +102,7 @@ const data = new SlashCommandBuilder()
 export default {
   data: data as SlashCommandBuilder,
   async execute(interaction, services?: AppContainer) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (!services?.characterService) {
       await interaction.editReply({

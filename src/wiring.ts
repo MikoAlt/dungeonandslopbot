@@ -6,9 +6,11 @@ import { StoryRepository } from './db/repositories/story.js';
 import { MessageRepository } from './db/repositories/message.js';
 import { EmbeddingRepository } from './db/repositories/embedding.js';
 import { CombatRepository } from './db/repositories/combat.js';
+import { UserRepository } from './db/repositories/user.js';
 import { CharacterService } from './services/character.js';
 import { CampaignService } from './services/campaign.js';
 import { StoryService } from './services/story.js';
+import { UserService } from './services/user.js';
 import { LLMOrchestrator, createOrchestrator } from './services/llm/orchestrator.js';
 import { ContextManager } from './services/context/manager.js';
 import { CommandQueue } from './services/queue.js';
@@ -22,12 +24,14 @@ export interface AppContainer {
   campaignRepo: CampaignRepository;
   storyRepo: StoryRepository;
   characterRepo: CharacterRepository;
+  userRepo: UserRepository;
   messageRepo: MessageRepository;
   embeddingRepo: EmbeddingRepository;
   combatRepo: CombatRepository;
   campaignService: CampaignService;
   storyService: StoryService;
   characterService: CharacterService;
+  userService: UserService;
   llmOrchestrator: LLMOrchestrator;
   contextManager: ContextManager;
   commandQueue: CommandQueue;
@@ -60,6 +64,7 @@ export async function createContainer(): Promise<AppContainer> {
   const campaignRepo = new CampaignRepository(prisma);
   const storyRepo = new StoryRepository(prisma);
   const characterRepo = new CharacterRepository(prisma);
+  const userRepo = new UserRepository(prisma);
   const messageRepo = new MessageRepository(prisma);
   const embeddingRepo = new EmbeddingRepository(prisma);
   const combatRepo = new CombatRepository(prisma);
@@ -69,6 +74,7 @@ export async function createContainer(): Promise<AppContainer> {
   const campaignService = new CampaignService(campaignRepo, campaignState);
   const storyService = new StoryService(storyRepo);
   const characterService = new CharacterService(characterRepo);
+  const userService = new UserService(userRepo);
 
   const messageStoreData = createMessageStore();
 
@@ -132,12 +138,14 @@ export async function createContainer(): Promise<AppContainer> {
     campaignRepo,
     storyRepo,
     characterRepo,
+    userRepo,
     messageRepo,
     embeddingRepo,
     combatRepo,
     campaignService,
     storyService,
     characterService,
+    userService,
     llmOrchestrator,
     contextManager,
     commandQueue,

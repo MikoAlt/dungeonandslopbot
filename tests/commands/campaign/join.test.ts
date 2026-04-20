@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import type { ChatInputCommandInteraction } from 'discord.js';
+import { MessageFlags, type ChatInputCommandInteraction } from 'discord.js';
 
 const mockJoinCampaign = vi.fn();
 
@@ -42,7 +42,7 @@ describe('campaign join command', () => {
     const command = campaignJoinCommand;
     await command.execute(mockInteraction as ChatInputCommandInteraction, mockServices);
 
-    expect(mockInteraction.deferReply).toHaveBeenCalledWith({ ephemeral: true });
+    expect(mockInteraction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
   });
 
   it('joins campaign with correct args', async () => {

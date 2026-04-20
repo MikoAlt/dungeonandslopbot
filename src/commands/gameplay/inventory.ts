@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '../../types/command.js';
 import { Colors } from '../../embeds/themes.js';
 
@@ -73,7 +73,7 @@ export default {
     ),
 
   async execute(interaction, services?: InventoryCommandServices) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const subcommand = interaction.options.getSubcommand();
     const characterId = interaction.options.getString('character-id', true);

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '../../types/command.js';
 import type { AppContainer } from '../../wiring.js';
 import { NotFoundError, ValidationError } from '../../errors.js';
@@ -18,7 +18,7 @@ export default {
     ),
 
   async execute(interaction, services?: AppContainer) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (!services?.campaignService) {
       await interaction.editReply({
